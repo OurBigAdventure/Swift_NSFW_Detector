@@ -68,10 +68,21 @@ extension UIImage {
       let model = try OpenNSFW(configuration: modelConfig)
       let NSFWmodel = try VNCoreMLModel(for: model.model)
       let vnRequest = VNCoreMLRequest(model: NSFWmodel, completionHandler: { request, error in
-        guard let observations = request.results as? [VNClassificationObservation]
-        else { fatalError("unexpected result type from VNCoreMLRequest") }
-        guard let best = observations.first
-        else { fatalError("can't get best result") }
+        if let error = error {
+          print("🧨 VNCoreMLRequest Error: \(error.localizedDescription)")
+          completion(.unknown, 0.0)
+          return
+        }
+        guard let observations = request.results as? [VNClassificationObservation] else {
+          print("🧨 Unexpected result type from VNCoreMLRequest")
+          completion(.unknown, 0.0)
+          return
+        }
+        guard let best = observations.first else {
+          print("🧨 Unable to retrieve NSFW observation")
+          completion(.unknown, 0.0)
+          return
+        }
         switch best.identifier {
           case "NSFW": completion(.nsfw, best.confidence)
           case "SFW": completion(.sfw, best.confidence)
